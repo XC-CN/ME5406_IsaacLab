@@ -30,10 +30,10 @@ if not exist "%isaac_path%" (
 )
 rem Check if the directory exists
 if not exist "%isaac_path%" (
-    echo [ERROR] Unable to find the Isaac Sim directory: %isaac_path%
-    echo %tab%This could be due to the following reasons:
-    echo %tab%1. Conda environment with Isaac Sim pip package is not activated.
-    echo %tab%2. Isaac Sim directory is not available at the default path: %ISAACLAB_PATH%\_isaac_sim
+    echo [错误] 无法找到Isaac Sim目录: %isaac_path%
+    echo %tab%这可能是由于以下原因:
+    echo %tab%1. 没有激活包含Isaac Sim pip包的Conda环境。
+    echo %tab%2. Isaac Sim目录在默认路径不可用: %ISAACLAB_PATH%\_isaac_sim
     exit /b 1
 )
 goto :eof
@@ -61,10 +61,10 @@ if not exist "%python_exe%" (
     )
 )
 if not exist "%python_exe%" (
-    echo [ERROR] Unable to find any Python executable at path: %python_exe%
-    echo %tab%This could be due to the following reasons:
-    echo %tab%1. Conda environment is not activated.
-    echo %tab%2. Python executable is not available at the default path: %ISAACLAB_PATH%\_isaac_sim\python.bat
+    echo [错误] 无法在以下路径找到任何Python可执行文件: %python_exe%
+    echo %tab%这可能是由于以下原因:
+    echo %tab%1. Conda环境未激活。
+    echo %tab%2. Python可执行文件在默认路径不可用: %ISAACLAB_PATH%\_isaac_sim\python.bat
     exit /b 1
 )
 goto :eof
@@ -85,7 +85,7 @@ if errorlevel 1 (
 )
 rem check if there is a python path available
 if not exist "%isaacsim_exe%" (
-    echo [ERROR] No isaac-sim executable found at path: %isaacsim_exe%
+    echo [错误] 在以下路径找不到isaac-sim可执行文件: %isaacsim_exe%
     exit /b 1
 )
 goto :eof
@@ -98,7 +98,7 @@ rem retrieve the python executable
 call :extract_python_exe
 rem if the directory contains setup.py then install the python module
 if exist "%ext_folder%\setup.py" (
-    echo     module: %ext_folder%
+    echo     模块: %ext_folder%
     call !python_exe! -m pip install --editable %ext_folder%
 )
 goto :eof
@@ -111,15 +111,15 @@ set env_name=%conda_env_name%
 rem check if conda is installed
 where conda >nul 2>nul
 if errorlevel 1 (
-    echo [ERROR] Conda could not be found. Please install conda and try again.
+    echo [错误] 找不到Conda。请安装conda并重试。
     exit /b 1
 )
 rem check if the environment exists
 call conda env list | findstr /c:"%env_name%" >nul
 if %errorlevel% equ 0 (
-    echo [INFO] Conda environment named '%env_name%' already exists.
+    echo [信息] 名为'%env_name%'的Conda环境已存在。
 ) else (
-    echo [INFO] Creating conda environment named '%env_name%'...
+    echo [信息] 创建名为'%env_name%'的conda环境...
     call conda create -y --name %env_name% python=3.10
 )
 rem cache current paths for later
@@ -200,26 +200,26 @@ rem remove variables from environment during deactivation
 ) > "%CONDA_PREFIX%\etc\conda\deactivate.d\unsetenv_vars.ps1"
 
 rem install some extra dependencies
-echo [INFO] Installing extra dependencies (this might take a few minutes)...
+echo [信息] 安装额外依赖项(这可能需要几分钟)...
 call conda install -c conda-forge -y importlib_metadata >nul 2>&1
 
 rem deactivate the environment
 call conda deactivate
 rem add information to the user about alias
-echo [INFO] Added 'isaaclab' alias to conda environment for 'isaaclab.bat' script.
-echo [INFO] Created conda environment named '%env_name%'.
+echo [信息] 为'isaaclab.bat'脚本向conda环境添加了'isaaclab'别名。
+echo [信息] 创建了名为'%env_name%'的conda环境。
 echo.
-echo       1. To activate the environment, run:                conda activate %env_name%
-echo       2. To install Isaac Lab extensions, run:            isaaclab -i
-echo       3. To perform formatting, run:                      isaaclab -f
-echo       4. To deactivate the environment, run:              conda deactivate
+echo       1. 要激活环境，运行:                conda activate %env_name%
+echo       2. 要安装Isaac Lab扩展，运行:      isaaclab -i
+echo       3. 要执行格式化，运行:              isaaclab -f
+echo       4. 要停用环境，运行:                conda deactivate
 echo.
 goto :eof
 
 
 rem Update the vscode settings from template and Isaac Sim settings
 :update_vscode_settings
-echo [INFO] Setting up vscode settings...
+echo [信息] 设置vscode设置...
 rem Retrieve the python executable
 call :extract_python_exe
 rem Path to setup_vscode.py
@@ -228,7 +228,7 @@ rem Check if the file exists before attempting to run it
 if exist "%setup_vscode_script%" (
     call !python_exe! "%setup_vscode_script%"
 ) else (
-    echo [WARNING] setup_vscode.py not found. Aborting vscode settings setup.
+    echo [警告] 找不到setup_vscode.py。中止vscode设置配置。
 )
 goto :eof
 
@@ -236,19 +236,19 @@ goto :eof
 rem Print the usage description
 :print_help
 echo.
-echo usage: %~nx0 [-h] [-i] [-f] [-p] [-s] [-v] [-d] [-n] [-c] -- Utility to manage extensions in Isaac Lab.
+echo 用法: %~nx0 [-h] [-i] [-f] [-p] [-s] [-v] [-d] [-n] [-c] -- Isaac Lab管理工具。
 echo.
-echo optional arguments:
-echo     -h, --help           Display the help content.
-echo     -i, --install [LIB]  Install the extensions inside Isaac Lab and learning frameworks as extra dependencies. Default is 'all'.
-echo     -f, --format         Run pre-commit to format the code and check lints.
-echo     -p, --python         Run the python executable (python.bat) provided by Isaac Sim.
-echo     -s, --sim            Run the simulator executable (isaac-sim.bat) provided by Isaac Sim.
-echo     -t, --test           Run all python unittest tests.
-echo     -v, --vscode         Generate the VSCode settings file from template.
-echo     -d, --docs           Build the documentation from source using sphinx.
-echo     -n, --new            Create a new external project or internal task from template.
-echo     -c, --conda [NAME]   Create the conda environment for Isaac Lab. Default name is 'env_isaaclab'.
+echo 可选参数:
+echo     -h, --help           显示帮助内容。
+echo     -i, --install [LIB]  在Isaac Lab内安装扩展和学习框架作为额外依赖项。默认为'all'。
+echo     -f, --format         运行pre-commit格式化代码并检查lint。
+echo     -p, --python         运行由Isaac Sim提供的python可执行文件(python.bat)。
+echo     -s, --sim            运行由Isaac Sim提供的模拟器可执行文件(isaac-sim.bat)。
+echo     -t, --test           运行所有python单元测试。
+echo     -v, --vscode         从模板生成VSCode设置文件。
+echo     -d, --docs           使用sphinx从源代码构建文档。
+echo     -n, --new            从模板创建新的外部项目或内部任务。
+echo     -c, --conda [NAME]   为Isaac Lab创建conda环境。默认名称为'env_isaaclab'。
 echo.
 goto :eof
 
@@ -258,7 +258,7 @@ rem Main
 
 rem check argument provided
 if "%~1"=="" (
-    echo [Error] No arguments provided.
+    echo [错误] 未提供参数。
     call :print_help
     exit /b 1
 )
@@ -271,23 +271,23 @@ set "arg=%~1"
 rem read the key
 if "%arg%"=="-i" (
     rem install the python packages in isaaclab/source directory
-    echo [INFO] Installing extensions inside the Isaac Lab repository...
+    echo [信息] 在Isaac Lab仓库内安装扩展...
     call :extract_python_exe
     for /d %%d in ("%ISAACLAB_PATH%\source\*") do (
         set ext_folder="%%d"
         call :install_isaaclab_extension
     )
     rem install the python packages for supported reinforcement learning frameworks
-    echo [INFO] Installing extra requirements such as learning frameworks...
+    echo [信息] 安装额外要求，如学习框架...
     if "%~2"=="" (
-        echo [INFO] Installing all rl-frameworks.
+        echo [信息] 安装所有rl框架...
         set framework_name=all
     ) else if "%~2"=="none" (
-        echo [INFO]  No rl-framework will be installed.
+        echo [信息] 不会安装rl框架。
         set framework_name=none
         shift
     ) else (
-        echo [INFO] Installing rl-framework: %2.
+        echo [信息] 安装rl框架: %2
         set framework_name=%2
         shift
     )
@@ -296,23 +296,23 @@ if "%arg%"=="-i" (
     shift
 ) else if "%arg%"=="--install" (
     rem install the python packages in source directory
-    echo [INFO] Installing extensions inside the Isaac Lab repository...
+    echo [信息] 在Isaac Lab仓库内安装扩展...
     call :extract_python_exe
     for /d %%d in ("%ISAACLAB_PATH%\source\*") do (
         set ext_folder="%%d"
         call :install_isaaclab_extension
     )
     rem install the python packages for supported reinforcement learning frameworks
-    echo [INFO] Installing extra requirements such as learning frameworks...
+    echo [信息] 安装额外要求，如学习框架...
     if "%~2"=="" (
-        echo [INFO] Installing all rl-frameworks.
+        echo [信息] 安装所有rl框架...
         set framework_name=all
     ) else if "%~2"=="none" (
-        echo [INFO]  No rl-framework will be installed.
+        echo [信息] 不会安装rl框架。
         set framework_name=none
         shift
     ) else (
-        echo [INFO] Installing rl-framework: %2.
+        echo [信息] 安装rl框架: %2
         set framework_name=%2
         shift
     )
@@ -325,11 +325,11 @@ if "%arg%"=="-i" (
 ) else if "%arg%"=="-c" (
     rem use default name if not provided
     if not "%~2"=="" (
-        echo [INFO] Using conda environment name: %2
+        echo [信息] 使用conda环境名称: %2
         set conda_env_name=%2
         shift
     ) else (
-        echo [INFO] Using default conda environment name: env_isaaclab
+        echo [信息] 使用默认conda环境名称: env_isaaclab
         set conda_env_name=env_isaaclab
     )
     call :setup_conda_env %conda_env_name%
@@ -337,11 +337,11 @@ if "%arg%"=="-i" (
 ) else if "%arg%"=="--conda" (
     rem use default name if not provided
     if not "%~2"=="" (
-        echo [INFO] Using conda environment name: %2
+        echo [信息] 使用conda环境名称: %2
         set conda_env_name=%2
         shift
     ) else (
-        echo [INFO] Using default conda environment name: env_isaaclab
+        echo [信息] 使用默认conda环境名称: env_isaaclab
         set conda_env_name=env_isaaclab
     )
     call :setup_conda_env %conda_env_name%
@@ -359,12 +359,12 @@ if "%arg%"=="-i" (
     rem check if pre-commit is installed
     pip show pre-commit > nul 2>&1
     if errorlevel 1 (
-        echo [INFO] Installing pre-commit...
+        echo [信息] 安装pre-commit...
         pip install pre-commit
     )
 
     rem always execute inside the Isaac Lab directory
-    echo [INFO] Formatting the repository...
+    echo [信息] 格式化仓库...
     pushd %ISAACLAB_PATH%
     call python -m pre_commit run --all-files
     popd >nul
@@ -387,12 +387,12 @@ if "%arg%"=="-i" (
     rem check if pre-commit is installed
     pip show pre-commit > nul 2>&1
     if errorlevel 1 (
-        echo [INFO] Installing pre-commit...
+        echo [信息] 安装pre-commit...
         pip install pre-commit
     )
 
     rem always execute inside the Isaac Lab directory
-    echo [INFO] Formatting the repository...
+    echo [信息] 格式化仓库...
     pushd %ISAACLAB_PATH%
     call python -m pre_commit run --all-files
     popd >nul
@@ -405,7 +405,7 @@ if "%arg%"=="-i" (
 ) else if "%arg%"=="-p" (
     rem run the python provided by Isaac Sim
     call :extract_python_exe
-    echo [INFO] Using python from: !python_exe!
+    echo [信息] 使用来自以下位置的python: !python_exe!
     REM Loop through all arguments - mimic shift
     set "allArgs="
     for %%a in (%*) do (
@@ -421,7 +421,7 @@ if "%arg%"=="-i" (
 ) else if "%arg%"=="--python" (
     rem run the python provided by Isaac Sim
     call :extract_python_exe
-    echo [INFO] Using python from: !python_exe!
+    echo [信息] 使用来自以下位置的python: !python_exe!
     REM Loop through all arguments - mimic shift
     set "allArgs="
     for %%a in (%*) do (
@@ -437,7 +437,7 @@ if "%arg%"=="-i" (
 ) else if "%arg%"=="-s" (
     rem run the simulator exe provided by isaacsim
     call :extract_isaacsim_exe
-    echo [INFO] Running isaac-sim from: !isaacsim_exe!
+    echo [信息] 从以下位置运行isaac-sim: !isaacsim_exe!
     set "allArgs="
     for %%a in (%*) do (
         REM Append each argument to the variable, skip the first one
@@ -452,7 +452,7 @@ if "%arg%"=="-i" (
 ) else if "%arg%"=="--sim" (
     rem run the simulator exe provided by Isaac Sim
     call :extract_isaacsim_exe
-    echo [INFO] Running isaac-sim from: !isaacsim_exe!
+    echo [信息] 从以下位置运行isaac-sim: !isaacsim_exe!
     set "allArgs="
     for %%a in (%*) do (
         REM Append each argument to the variable, skip the first one
@@ -476,10 +476,10 @@ if "%arg%"=="-i" (
             set "skip=1"
         )
     )
-    echo [INFO] Installing template dependencies...
+    echo [信息] 安装模板依赖项...
     !python_exe! -m pip install -q -r tools\template\requirements.txt
     echo.
-    echo [INFO] Running template generator...
+    echo [信息] 运行模板生成器...
     echo.
     !python_exe! tools\template\cli.py !allArgs!
     goto :end
@@ -495,10 +495,10 @@ if "%arg%"=="-i" (
             set "skip=1"
         )
     )
-    echo [INFO] Installing template dependencies...
+    echo [信息] 安装模板依赖项...
     !python_exe! -m pip install -q -r tools\template\requirements.txt
     echo.
-    echo [INFO] Running template generator...
+    echo [信息] 运行模板生成器...
     echo.
     !python_exe! tools\template\cli.py !allArgs!
     goto :end
@@ -542,24 +542,24 @@ if "%arg%"=="-i" (
     goto :end
 ) else if "%arg%"=="-d" (
     rem build the documentation
-    echo [INFO] Building documentation...
+    echo [信息] 构建文档...
     call :extract_python_exe
     pushd %ISAACLAB_PATH%\docs
     call !python_exe! -m pip install -r requirements.txt >nul
     call !python_exe! -m sphinx -b html -d _build\doctrees . _build\html
-    echo [INFO] To open documentation on default browser, run:
+    echo [信息] 要在默认浏览器中打开文档，运行:
     echo xdg-open "%ISAACLAB_PATH%\docs\_build\html\index.html"
     popd >nul
     shift
     goto :end
 ) else if "%arg%"=="--docs" (
     rem build the documentation
-    echo [INFO] Building documentation...
+    echo [信息] 构建文档...
     call :extract_python_exe
     pushd %ISAACLAB_PATH%\docs
     call !python_exe! -m pip install -r requirements.txt >nul
     call !python_exe! -m sphinx -b html -d _build\doctrees . _build\current
-    echo [INFO] To open documentation on default browser, run:
+    echo [信息] 要在默认浏览器中打开文档，运行:
     echo xdg-open "%ISAACLAB_PATH%\docs\_build\current\index.html"
     popd >nul
     shift
@@ -571,7 +571,7 @@ if "%arg%"=="-i" (
     call :print_help
     goto :end
 ) else (
-    echo Invalid argument provided: %arg%
+    echo 提供了无效参数: %arg%
     call :print_help
     exit /b 1
 )

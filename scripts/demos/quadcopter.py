@@ -20,14 +20,14 @@ import torch
 
 from isaaclab.app import AppLauncher
 
-# add argparse arguments
+# 添加命令行参数解析器
 parser = argparse.ArgumentParser(description="This script demonstrates how to simulate a quadcopter.")
-# append AppLauncher cli args
+# 添加AppLauncher的命令行参数
 AppLauncher.add_app_launcher_args(parser)
-# parse the arguments
+# 解析命令行参数
 args_cli = parser.parse_args()
 
-# launch omniverse app
+# 启动Omniverse应用程序
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
@@ -44,75 +44,75 @@ from isaaclab_assets import CRAZYFLIE_CFG  # isort:skip
 
 
 def main():
-    """Main function."""
-    # Load kit helper
+    """主函数."""
+    # 加载仿真配置
     sim_cfg = sim_utils.SimulationCfg(dt=0.005, device=args_cli.device)
     sim = SimulationContext(sim_cfg)
-    # Set main camera
+    # 设置主摄像机视角
     sim.set_camera_view(eye=[0.5, 0.5, 1.0], target=[0.0, 0.0, 0.5])
 
-    # Spawn things into stage
-    # Ground-plane
+    # 在场景中生成物体
+    # 地面平面
     cfg = sim_utils.GroundPlaneCfg()
     cfg.func("/World/defaultGroundPlane", cfg)
-    # Lights
+    # 灯光
     cfg = sim_utils.DistantLightCfg(intensity=3000.0, color=(0.75, 0.75, 0.75))
     cfg.func("/World/Light", cfg)
 
-    # Robots
+    # 机器人
     robot_cfg = CRAZYFLIE_CFG.replace(prim_path="/World/Crazyflie")
     robot_cfg.spawn.func("/World/Crazyflie", robot_cfg.spawn, translation=robot_cfg.init_state.pos)
 
-    # create handles for the robots
+    # 创建机器人控制句柄
     robot = Articulation(robot_cfg)
 
-    # Play the simulator
+    # 启动仿真器
     sim.reset()
 
-    # Fetch relevant parameters to make the quadcopter hover in place
-    prop_body_ids = robot.find_bodies("m.*_prop")[0]
-    robot_mass = robot.root_physx_view.get_masses().sum()
-    gravity = torch.tensor(sim.cfg.gravity, device=sim.device).norm()
+    # 获取相关参数，使四轴飞行器悬停在原地
+    prop_body_ids = robot.find_bodies("m.*_prop")[0]  # 获取螺旋桨的ID
+    robot_mass = robot.root_physx_view.get_masses().sum()  # 计算机器人总质量
+    gravity = torch.tensor(sim.cfg.gravity, device=sim.device).norm()  # 获取重力大小
 
-    # Now we are ready!
+    # 准备完成
     print("[INFO]: Setup complete...")
 
-    # Define simulation stepping
-    sim_dt = sim.get_physics_dt()
-    sim_time = 0.0
-    count = 0
-    # Simulate physics
+    # 定义仿真步进参数
+    sim_dt = sim.get_physics_dt()  # 物理仿真时间步长
+    sim_time = 0.0  # 仿真时间计数器
+    count = 0  # 步数计数器
+    # 开始物理仿真
     while simulation_app.is_running():
-        # reset
+        # 每2000步重置一次仿真
         if count % 2000 == 0:
-            # reset counters
+            # 重置计数器
             sim_time = 0.0
             count = 0
-            # reset dof state
+            # 重置关节状态
             joint_pos, joint_vel = robot.data.default_joint_pos, robot.data.default_joint_vel
             robot.write_joint_state_to_sim(joint_pos, joint_vel)
-            robot.write_root_pose_to_sim(robot.data.default_root_state[:, :7])
-            robot.write_root_velocity_to_sim(robot.data.default_root_state[:, 7:])
+            robot.write_root_pose_to_sim(robot.data.default_root_state[:, :7])  # 位置和旋转
+            robot.write_root_velocity_to_sim(robot.data.default_root_state[:, 7:])  # 线速度和角速度
             robot.reset()
-            # reset command
+            # 输出重置信息
             print(">>>>>>>> Reset!")
-        # apply action to the robot (make the robot float in place)
-        forces = torch.zeros(robot.num_instances, 4, 3, device=sim.device)
-        torques = torch.zeros_like(forces)
-        forces[..., 2] = robot_mass * gravity / 4.0
-        robot.set_external_force_and_torque(forces, torques, body_ids=prop_body_ids)
-        robot.write_data_to_sim()
-        # perform step
+        # 对机器人施加作用力（使机器人悬停在原地）
+        forces = torch.zeros(robot.num_instances, 4, 3, device=sim.device)  # 初始化力矩阵
+        torques = torch.zeros_like(forces)  # 初始化扭矩矩阵
+        forces[..., 2] = robot_mass * gravity / 4.0  # 在Z轴方向施加力以抵消重力，平均分配到4个螺旋桨
+        robot.set_external_force_and_torque(forces, torques, body_ids=prop_body_ids)  # 设置外部力和扭矩
+        robot.write_data_to_sim()  # 将数据写入仿真
+        # 执行仿真步进
         sim.step()
-        # update sim-time
+        # 更新仿真时间
         sim_time += sim_dt
         count += 1
-        # update buffers
+        # 更新机器人状态缓冲区
         robot.update(sim_dt)
 
 
 if __name__ == "__main__":
-    # run the main function
+    # 运行主函数
     main()
-    # close sim app
+    # 关闭仿真应用程序
     simulation_app.close()

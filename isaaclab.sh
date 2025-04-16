@@ -6,23 +6,23 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 #==
-# Configurations
+# 配置
 #==
 
-# Exits if error occurs
+# 如果发生错误则退出
 set -e
 
-# Set tab-spaces
+# 设置制表符空格
 tabs 4
 
-# get source directory
+# 获取源目录
 export ISAACLAB_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 #==
-# Helper functions
+# 辅助函数
 #==
 
-# check if running in docker
+# 检查是否在docker中运行
 is_docker() {
     [ -f /.dockerenv ] || \
     grep -q docker /proc/1/cgroup || \
@@ -31,165 +31,165 @@ is_docker() {
     [[ "$(hostname)" == *"."* ]]
 }
 
-# extract isaac sim path
+# 提取isaac sim路径
 extract_isaacsim_path() {
-    # Use the sym-link path to Isaac Sim directory
+    # 使用指向Isaac Sim目录的符号链接路径
     local isaac_path=${ISAACLAB_PATH}/_isaac_sim
-    # If above path is not available, try to find the path using python
+    # 如果上述路径不可用，尝试使用python查找路径
     if [ ! -d "${isaac_path}" ]; then
-        # Use the python executable to get the path
+        # 使用python可执行文件获取路径
         local python_exe=$(extract_python_exe)
-        # Retrieve the path importing isaac sim and getting the environment path
+        # 通过导入isaac sim并获取环境路径
         if [ $(${python_exe} -m pip list | grep -c 'isaacsim-rl') -gt 0 ]; then
             local isaac_path=$(${python_exe} -c "import isaacsim; import os; print(os.environ['ISAAC_PATH'])")
         fi
     fi
-    # check if there is a path available
+    # 检查是否有可用路径
     if [ ! -d "${isaac_path}" ]; then
-        # throw an error if no path is found
-        echo -e "[ERROR] Unable to find the Isaac Sim directory: '${isaac_path}'" >&2
-        echo -e "\tThis could be due to the following reasons:" >&2
-        echo -e "\t1. Conda environment is not activated." >&2
-        echo -e "\t2. Isaac Sim pip package 'isaacsim-rl' is not installed." >&2
-        echo -e "\t3. Isaac Sim directory is not available at the default path: ${ISAACLAB_PATH}/_isaac_sim" >&2
-        # exit the script
+        # 如果找不到路径则抛出错误
+        echo -e "[错误] 无法找到Isaac Sim目录: '${isaac_path}'" >&2
+        echo -e "\t这可能是由于以下原因:" >&2
+        echo -e "\t1. Conda环境未激活。" >&2
+        echo -e "\t2. Isaac Sim pip包 'isaacsim-rl' 未安装。" >&2
+        echo -e "\t3. Isaac Sim目录在默认路径不可用: ${ISAACLAB_PATH}/_isaac_sim" >&2
+        # 退出脚本
         exit 1
     fi
-    # return the result
+    # 返回结果
     echo ${isaac_path}
 }
 
-# extract the python from isaacsim
+# 从isaacsim提取python
 extract_python_exe() {
-    # check if using conda
+    # 检查是否使用conda
     if ! [[ -z "${CONDA_PREFIX}" ]]; then
-        # use conda python
+        # 使用conda python
         local python_exe=${CONDA_PREFIX}/bin/python
     else
-        # use kit python
+        # 使用工具包python
         local python_exe=${ISAACLAB_PATH}/_isaac_sim/python.sh
 
     if [ ! -f "${python_exe}" ]; then
-            # note: we need to check system python for cases such as docker
-            # inside docker, if user installed into system python, we need to use that
-            # otherwise, use the python from the kit
+            # 注意：我们需要检查系统python，例如在docker中
+            # 在docker内部，如果用户安装到系统python，我们需要使用它
+            # 否则，使用工具包中的python
             if [ $(python -m pip list | grep -c 'isaacsim-rl') -gt 0 ]; then
                 local python_exe=$(which python)
             fi
         fi
     fi
-    # check if there is a python path available
+    # 检查是否有可用的python路径
     if [ ! -f "${python_exe}" ]; then
-        echo -e "[ERROR] Unable to find any Python executable at path: '${python_exe}'" >&2
-        echo -e "\tThis could be due to the following reasons:" >&2
-        echo -e "\t1. Conda environment is not activated." >&2
-        echo -e "\t2. Isaac Sim pip package 'isaacsim-rl' is not installed." >&2
-        echo -e "\t3. Python executable is not available at the default path: ${ISAACLAB_PATH}/_isaac_sim/python.sh" >&2
+        echo -e "[错误] 无法在路径找到任何Python可执行文件: '${python_exe}'" >&2
+        echo -e "\t这可能是由于以下原因:" >&2
+        echo -e "\t1. Conda环境未激活。" >&2
+        echo -e "\t2. Isaac Sim pip包 'isaacsim-rl' 未安装。" >&2
+        echo -e "\t3. Python可执行文件在默认路径不可用: ${ISAACLAB_PATH}/_isaac_sim/python.sh" >&2
         exit 1
     fi
-    # return the result
+    # 返回结果
     echo ${python_exe}
 }
 
-# extract the simulator exe from isaacsim
+# 从isaacsim提取模拟器可执行文件
 extract_isaacsim_exe() {
-    # obtain the isaac sim path
+    # 获取isaac sim路径
     local isaac_path=$(extract_isaacsim_path)
-    # isaac sim executable to use
+    # 要使用的isaac sim可执行文件
     local isaacsim_exe=${isaac_path}/isaac-sim.sh
-    # check if there is a python path available
+    # 检查是否有可用的python路径
     if [ ! -f "${isaacsim_exe}" ]; then
-        # check for installation using Isaac Sim pip
-        # note: pip installed Isaac Sim can only come from a direct
-        # python environment, so we can directly use 'python' here
+        # 检查使用Isaac Sim pip安装
+        # 注意：通过pip安装的Isaac Sim只能来自直接的
+        # python环境，所以我们可以直接在这里使用'python'
         if [ $(python -m pip list | grep -c 'isaacsim-rl') -gt 0 ]; then
-            # Isaac Sim - Python packages entry point
+            # Isaac Sim - Python包入口点
             local isaacsim_exe="isaacsim isaacsim.exp.full"
         else
-            echo "[ERROR] No Isaac Sim executable found at path: ${isaac_path}" >&2
+            echo "[错误] 在路径找不到Isaac Sim可执行文件: ${isaac_path}" >&2
             exit 1
         fi
     fi
-    # return the result
+    # 返回结果
     echo ${isaacsim_exe}
 }
 
-# check if input directory is a python extension and install the module
+# 检查输入目录是否为python扩展并安装模块
 install_isaaclab_extension() {
-    # retrieve the python executable
+    # 获取python可执行文件
     python_exe=$(extract_python_exe)
-    # if the directory contains setup.py then install the python module
+    # 如果目录包含setup.py，则安装python模块
     if [ -f "$1/setup.py" ]; then
-        echo -e "\t module: $1"
+        echo -e "\t 模块: $1"
         ${python_exe} -m pip install --editable $1
     fi
 }
 
-# setup anaconda environment for Isaac Lab
+# 为Isaac Lab设置anaconda环境
 setup_conda_env() {
-    # get environment name from input
+    # 从输入获取环境名称
     local env_name=$1
-    # check conda is installed
+    # 检查是否安装了conda
     if ! command -v conda &> /dev/null
     then
-        echo "[ERROR] Conda could not be found. Please install conda and try again."
+        echo "[错误] 找不到Conda。请安装conda并重试。"
         exit 1
     fi
 
-    # check if the environment exists
+    # 检查环境是否存在
     if { conda env list | grep -w ${env_name}; } >/dev/null 2>&1; then
-        echo -e "[INFO] Conda environment named '${env_name}' already exists."
+        echo -e "[信息] 名为'${env_name}'的Conda环境已存在。"
     else
-        echo -e "[INFO] Creating conda environment named '${env_name}'..."
+        echo -e "[信息] 创建名为'${env_name}'的conda环境..."
         conda create -y --name ${env_name} python=3.10
     fi
 
-    # cache current paths for later
+    # 缓存当前路径以便后续使用
     cache_pythonpath=$PYTHONPATH
     cache_ld_library_path=$LD_LIBRARY_PATH
-    # clear any existing files
+    # 清除任何现有文件
     rm -f ${CONDA_PREFIX}/etc/conda/activate.d/setenv.sh
     rm -f ${CONDA_PREFIX}/etc/conda/deactivate.d/unsetenv.sh
-    # activate the environment
+    # 激活环境
     source $(conda info --base)/etc/profile.d/conda.sh
     conda activate ${env_name}
-    # setup directories to load Isaac Sim variables
+    # 设置目录以加载Isaac Sim变量
     mkdir -p ${CONDA_PREFIX}/etc/conda/activate.d
     mkdir -p ${CONDA_PREFIX}/etc/conda/deactivate.d
 
-    # add variables to environment during activation
+    # 在激活期间向环境添加变量
     printf '%s\n' '#!/usr/bin/env bash' '' \
         '# for Isaac Lab' \
         'export ISAACLAB_PATH='${ISAACLAB_PATH}'' \
         'alias isaaclab='${ISAACLAB_PATH}'/isaaclab.sh' \
         '' \
-        '# show icon if not runninng headless' \
+        '# 如果不是无头运行则显示图标' \
         'export RESOURCE_NAME="IsaacSim"' \
         '' > ${CONDA_PREFIX}/etc/conda/activate.d/setenv.sh
 
-    # check if we have _isaac_sim directory -> if so that means binaries were installed.
-    # we need to setup conda variables to load the binaries
+    # 检查是否有_isaac_sim目录 -> 如果有，表示已安装二进制文件。
+    # 我们需要设置conda变量来加载二进制文件
     local isaacsim_setup_conda_env_script=${ISAACLAB_PATH}/_isaac_sim/setup_conda_env.sh
 
     if [ -f "${isaacsim_setup_conda_env_script}" ]; then
-        # add variables to environment during activation
+        # 在激活期间向环境添加变量
         printf '%s\n' \
             '# for Isaac Sim' \
             'source '${isaacsim_setup_conda_env_script}'' \
             '' >> ${CONDA_PREFIX}/etc/conda/activate.d/setenv.sh
     fi
 
-    # reactivate the environment to load the variables
-    # needed because deactivate complains about Isaac Lab alias since it otherwise doesn't exist
+    # 重新激活环境以加载变量
+    # 需要这样做是因为deactivate会抱怨Isaac Lab别名，因为它否则不存在
     conda activate ${env_name}
 
-    # remove variables from environment during deactivation
+    # 在停用期间从环境中删除变量
     printf '%s\n' '#!/usr/bin/env bash' '' \
         '# for Isaac Lab' \
         'unalias isaaclab &>/dev/null' \
         'unset ISAACLAB_PATH' \
         '' \
-        '# restore paths' \
+        '# 恢复路径' \
         'export PYTHONPATH='${cache_pythonpath}'' \
         'export LD_LIBRARY_PATH='${cache_ld_library_path}'' \
         '' \
@@ -197,9 +197,9 @@ setup_conda_env() {
         'unset RESOURCE_NAME' \
         '' > ${CONDA_PREFIX}/etc/conda/deactivate.d/unsetenv.sh
 
-    # check if we have _isaac_sim directory -> if so that means binaries were installed.
+    # 检查是否有_isaac_sim目录 -> 如果有，表示已安装二进制文件。
     if [ -f "${isaacsim_setup_conda_env_script}" ]; then
-        # add variables to environment during activation
+        # 在激活期间向环境添加变量
         printf '%s\n' \
             '# for Isaac Sim' \
             'unset CARB_APP_PATH' \
@@ -208,236 +208,238 @@ setup_conda_env() {
             '' >> ${CONDA_PREFIX}/etc/conda/deactivate.d/unsetenv.sh
     fi
 
-    # install some extra dependencies
-    echo -e "[INFO] Installing extra dependencies (this might take a few minutes)..."
+    # 安装一些额外的依赖项
+    echo -e "[信息] 安装额外依赖项（这可能需要几分钟）..."
     conda install -c conda-forge -y importlib_metadata &> /dev/null
 
-    # deactivate the environment
+    # 停用环境
     conda deactivate
-    # add information to the user about alias
-    echo -e "[INFO] Added 'isaaclab' alias to conda environment for 'isaaclab.sh' script."
-    echo -e "[INFO] Created conda environment named '${env_name}'.\n"
-    echo -e "\t\t1. To activate the environment, run:                conda activate ${env_name}"
-    echo -e "\t\t2. To install Isaac Lab extensions, run:            isaaclab -i"
-    echo -e "\t\t4. To perform formatting, run:                      isaaclab -f"
-    echo -e "\t\t5. To deactivate the environment, run:              conda deactivate"
+    # 向用户添加有关别名的信息
+    echo -e "[信息] 为'isaaclab.sh'脚本向conda环境添加了'isaaclab'别名。"
+    echo -e "[信息] 创建了名为'${env_name}'的conda环境。\n"
+    echo -e "\t\t1. 要激活环境，运行:                conda activate ${env_name}"
+    echo -e "\t\t2. 要安装Isaac Lab扩展，运行:            isaaclab -i"
+    echo -e "\t\t4. 要执行格式化，运行:                      isaaclab -f"
+    echo -e "\t\t5. 要停用环境，运行:              conda deactivate"
     echo -e "\n"
 }
 
-# update the vscode settings from template and isaac sim settings
+# 从模板和isaac sim设置更新vscode设置
 update_vscode_settings() {
-    echo "[INFO] Setting up vscode settings..."
-    # retrieve the python executable
+    echo "[信息] 设置vscode设置..."
+    # 获取python可执行文件
     python_exe=$(extract_python_exe)
-    # path to setup_vscode.py
+    # setup_vscode.py的路径
     setup_vscode_script="${ISAACLAB_PATH}/.vscode/tools/setup_vscode.py"
-    # check if the file exists before attempting to run it
+    # 在尝试运行之前检查文件是否存在
     if [ -f "${setup_vscode_script}" ]; then
         ${python_exe} "${setup_vscode_script}"
     else
-        echo "[WARNING] Unable to find the script 'setup_vscode.py'. Aborting vscode settings setup."
+        echo "[警告] 无法找到脚本'setup_vscode.py'。中止vscode设置设置。"
     fi
 }
 
-# print the usage description
+# 打印使用说明
 print_help () {
-    echo -e "\nusage: $(basename "$0") [-h] [-i] [-f] [-p] [-s] [-t] [-o] [-v] [-d] [-n] [-c] -- Utility to manage Isaac Lab."
-    echo -e "\noptional arguments:"
-    echo -e "\t-h, --help           Display the help content."
-    echo -e "\t-i, --install [LIB]  Install the extensions inside Isaac Lab and learning frameworks as extra dependencies. Default is 'all'."
-    echo -e "\t-f, --format         Run pre-commit to format the code and check lints."
-    echo -e "\t-p, --python         Run the python executable provided by Isaac Sim or virtual environment (if active)."
-    echo -e "\t-s, --sim            Run the simulator executable (isaac-sim.sh) provided by Isaac Sim."
-    echo -e "\t-t, --test           Run all python unittest tests."
-    echo -e "\t-o, --docker         Run the docker container helper script (docker/container.sh)."
-    echo -e "\t-v, --vscode         Generate the VSCode settings file from template."
-    echo -e "\t-d, --docs           Build the documentation from source using sphinx."
-    echo -e "\t-n, --new            Create a new external project or internal task from template."
-    echo -e "\t-c, --conda [NAME]   Create the conda environment for Isaac Lab. Default name is 'env_isaaclab'."
+    echo -e "\n用法: $(basename "$0") [-h] [-i] [-f] [-p] [-s] [-t] [-o] [-v] [-d] [-n] [-c] -- 管理Isaac Lab的实用工具。"
+    echo -e "\n可选参数:"
+    echo -e "\t-h, --help           显示帮助内容。"
+    echo -e "\t-i, --install [LIB]  在Isaac Lab内安装扩展和学习框架作为额外依赖项。默认为'all'。"
+    echo -e "\t-f, --format         运行pre-commit来格式化代码并检查lint。"
+    echo -e "\t-p, --python         运行Isaac Sim或虚拟环境（如果激活）提供的python可执行文件。"
+    echo -e "\t-s, --sim            运行Isaac Sim提供的模拟器可执行文件（isaac-sim.sh）。"
+    echo -e "\t-t, --test           运行所有python单元测试。"
+    echo -e "\t-o, --docker         运行docker容器帮助脚本（docker/container.sh）。"
+    echo -e "\t-v, --vscode         从模板生成VSCode设置文件。"
+    echo -e "\t-d, --docs           使用sphinx从源代码构建文档。"
+    echo -e "\t-n, --new            从模板创建新的外部项目或内部任务。"
+    echo -e "\t-c, --conda [NAME]   为Isaac Lab创建conda环境。默认名称为'env_isaaclab'。"
     echo -e "\n" >&2
 }
 
 
 #==
-# Main
+# 主程序
 #==
 
-# check argument provided
+# 检查提供的参数
 if [ -z "$*" ]; then
-    echo "[Error] No arguments provided." >&2;
+    echo "[错误] 未提供参数。" >&2;
     print_help
     exit 1
 fi
 
-# pass the arguments
+# 传递参数
 while [[ $# -gt 0 ]]; do
-    # read the key
+    # 读取键
     case "$1" in
         -i|--install)
-            # install the python packages in IsaacLab/source directory
-            echo "[INFO] Installing extensions inside the Isaac Lab repository..."
+            # 在IsaacLab/source目录中安装python包
+            echo "[信息] 在Isaac Lab仓库内安装扩展..."
             python_exe=$(extract_python_exe)
-            # recursively look into directories and install them
-            # this does not check dependencies between extensions
+            # 递归查看目录并安装它们
+            # 这不检查扩展之间的依赖关系
             export -f extract_python_exe
             export -f install_isaaclab_extension
-            # source directory
+            # 源目录
             find -L "${ISAACLAB_PATH}/source" -mindepth 1 -maxdepth 1 -type d -exec bash -c 'install_isaaclab_extension "{}"' \;
-            # install the python packages for supported reinforcement learning frameworks
-            echo "[INFO] Installing extra requirements such as learning frameworks..."
-            # check if specified which rl-framework to install
+            # 为支持的强化学习框架安装python包
+            echo "[信息] 安装额外要求，如学习框架..."
+            # 检查是否指定了要安装的rl框架
             if [ -z "$2" ]; then
-                echo "[INFO] Installing all rl-frameworks..."
+                echo "[信息] 安装所有rl框架..."
                 framework_name="all"
             elif [ "$2" = "none" ]; then
-                echo "[INFO] No rl-framework will be installed."
+                echo "[信息] 不会安装rl框架。"
                 framework_name="none"
-                shift # past argument
+                shift # 跳过参数
             else
-                echo "[INFO] Installing rl-framework: $2"
+                echo "[信息] 安装rl框架: $2"
                 framework_name=$2
-                shift # past argument
+                shift # 跳过参数
             fi
-            # install the learning frameworks specified
+            # 安装指定的学习框架
             ${python_exe} -m pip install -e ${ISAACLAB_PATH}/source/isaaclab_rl["${framework_name}"]
             ${python_exe} -m pip install -e ${ISAACLAB_PATH}/source/isaaclab_mimic["${framework_name}"]
 
-            # check if we are inside a docker container or are building a docker image
-            # in that case don't setup VSCode since it asks for EULA agreement which triggers user interaction
+            # 检查我们是否在docker容器内或正在构建docker镜像
+            # 在这种情况下不设置VSCode，因为它会要求EULA协议，这会触发用户交互
             if is_docker; then
-                echo "[INFO] Running inside a docker container. Skipping VSCode settings setup."
-                echo "[INFO] To setup VSCode settings, run 'isaaclab -v'."
+                echo "[信息] 在docker容器内运行。跳过VSCode设置设置。"
+                echo "[信息] 要设置VSCode设置，运行'isaaclab -v'。"
             else
-                # update the vscode settings
+                # 更新vscode设置
                 update_vscode_settings
             fi
 
-            # unset local variables
+            # 取消设置局部变量
             unset extract_python_exe
             unset install_isaaclab_extension
-            shift # past argument
+            shift # 跳过参数
             ;;
         -c|--conda)
-            # use default name if not provided
+            # 如果未提供则使用默认名称
             if [ -z "$2" ]; then
-                echo "[INFO] Using default conda environment name: env_isaaclab"
+                echo "[信息] 使用默认conda环境名称: env_isaaclab"
                 conda_env_name="env_isaaclab"
             else
-                echo "[INFO] Using conda environment name: $2"
+                echo "[信息] 使用conda环境名称: $2"
                 conda_env_name=$2
-                shift # past argument
+                shift # 跳过参数
             fi
-            # setup the conda environment for Isaac Lab
+            # 为Isaac Lab设置conda环境
             setup_conda_env ${conda_env_name}
-            shift # past argument
+            shift # 跳过参数
             ;;
         -f|--format)
-            # reset the python path to avoid conflicts with pre-commit
-            # this is needed because the pre-commit hooks are installed in a separate virtual environment
-            # and it uses the system python to run the hooks
+            # 重置python路径以避免与pre-commit冲突
+            # 这是必要的，因为pre-commit钩子安装在单独的虚拟环境中
+            # 它使用系统python来运行钩子
             if [ -n "${CONDA_DEFAULT_ENV}" ]; then
                 cache_pythonpath=${PYTHONPATH}
                 export PYTHONPATH=""
             fi
-            # run the formatter over the repository
-            # check if pre-commit is installed
+            # 在仓库上运行格式化器
+            # 检查是否安装了pre-commit
             if ! command -v pre-commit &>/dev/null; then
-                echo "[INFO] Installing pre-commit..."
+                echo "[信息] 安装pre-commit..."
                 pip install pre-commit
             fi
-            # always execute inside the Isaac Lab directory
-            echo "[INFO] Formatting the repository..."
+            # 始终在Isaac Lab目录内执行
+            echo "[信息] 格式化仓库..."
             cd ${ISAACLAB_PATH}
             pre-commit run --all-files
             cd - > /dev/null
-            # set the python path back to the original value
+            # 将python路径设置回原始值
             if [ -n "${CONDA_DEFAULT_ENV}" ]; then
                 export PYTHONPATH=${cache_pythonpath}
             fi
-            shift # past argument
-            # exit neatly
+            shift # 跳过参数
+            # 干净地退出
             break
             ;;
         -p|--python)
-            # run the python provided by isaacsim
+            # 运行isaacsim提供的python
             python_exe=$(extract_python_exe)
-            echo "[INFO] Using python from: ${python_exe}"
-            shift # past argument
+            echo "[信息] 使用来自以下位置的python: ${python_exe}"
+            shift # 跳过参数
             ${python_exe} "$@"
-            # exit neatly
+            # 干净地退出
             break
             ;;
         -s|--sim)
-            # run the simulator exe provided by isaacsim
+            # 运行isaacsim提供的模拟器可执行文件
             isaacsim_exe=$(extract_isaacsim_exe)
-            echo "[INFO] Running isaac-sim from: ${isaacsim_exe}"
-            shift # past argument
+            echo "[信息] 从以下位置运行isaac-sim: ${isaacsim_exe}"
+            shift # 跳过参数
             ${isaacsim_exe} --ext-folder ${ISAACLAB_PATH}/source $@
-            # exit neatly
+            # 干净地退出
             break
             ;;
         -n|--new)
-            # run the template generator script
+            # 运行模板生成器脚本
             python_exe=$(extract_python_exe)
-            shift # past argument
-            echo "[INFO] Installing template dependencies..."
+            shift # 跳过参数
+            echo "[信息] 安装模板依赖项..."
             ${python_exe} -m pip install -q -r ${ISAACLAB_PATH}/tools/template/requirements.txt
-            echo -e "\n[INFO] Running template generator...\n"
+            echo -e "\n[信息] 运行模板生成器...\n"
             ${python_exe} ${ISAACLAB_PATH}/tools/template/cli.py $@
-            # exit neatly
+            # 干净地退出
             break
             ;;
         -t|--test)
-            # run the python provided by isaacsim
+            # 运行isaacsim提供的python
             python_exe=$(extract_python_exe)
-            shift # past argument
+            shift # 跳过参数
             ${python_exe} ${ISAACLAB_PATH}/tools/run_all_tests.py $@
-            # exit neatly
+            # 干净地退出
             break
             ;;
         -o|--docker)
-            # run the docker container helper script
+            # 运行docker容器帮助脚本
             docker_script=${ISAACLAB_PATH}/docker/container.sh
-            echo "[INFO] Running docker utility script from: ${docker_script}"
-            shift # past argument
+            echo "[信息] 从以下位置运行docker实用脚本: ${docker_script}"
+            shift # 跳过参数
             bash ${docker_script} $@
-            # exit neatly
+            # 干净地退出
             break
             ;;
         -v|--vscode)
-            # update the vscode settings
+            # 更新vscode设置
             update_vscode_settings
-            shift # past argument
-            # exit neatly
+            shift # 跳过参数
+            # 干净地退出
             break
             ;;
         -d|--docs)
-            # build the documentation
-            echo "[INFO] Building documentation..."
-            # retrieve the python executable
+            # 构建文档
+            echo "[信息] 构建文档..."
+            # 获取python可执行文件
             python_exe=$(extract_python_exe)
-            # install pip packages
+            # 安装pip包
             cd ${ISAACLAB_PATH}/docs
             ${python_exe} -m pip install -r requirements.txt > /dev/null
-            # build the documentation
+            # 构建文档
             ${python_exe} -m sphinx -b html -d _build/doctrees . _build/current
-            # open the documentation
-            echo -e "[INFO] To open documentation on default browser, run:"
+            # 打开文档
+            echo -e "[信息] 要在默认浏览器中打开文档，运行:"
             echo -e "\n\t\txdg-open $(pwd)/_build/current/index.html\n"
-            # exit neatly
+            # 干净地退出
             cd - > /dev/null
-            shift # past argument
-            # exit neatly
+            shift # 跳过参数
+            # 干净地退出
             break
             ;;
         -h|--help)
             print_help
             exit 1
             ;;
-        *) # unknown option
-            echo "[Error] Invalid argument provided: $1"
+        *) # 未知选项
+            echo "[错误] 提供了无效参数: $1"
             print_help
             exit 1
             ;;
     esac
 done
+
+source setup_conda_env.sh
