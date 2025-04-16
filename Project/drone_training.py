@@ -161,14 +161,14 @@ def run_simulator(sim: sim_utils.SimulationContext, entities: dict, origins: tor
         sim_time += sim_dt
         step += 1
 
-        # 每100步保存一次模型
-        if step % 100 == 0:
-            torch.save({
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'episode': episode,
-                'step': step,
-            }, f"drone_model_ep{episode}_step{step}.pth")
+        # # 每100步保存一次模型
+        # if step % 100 == 0:
+        #     torch.save({
+        #         'model_state_dict': model.state_dict(),
+        #         'optimizer_state_dict': optimizer.state_dict(),
+        #         'episode': episode,
+        #         'step': step,
+        #     }, f"drone_model_ep{episode}_step{step}.pth")
 
         # 打印训练信息
         if step % 10 == 0:
