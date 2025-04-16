@@ -14,87 +14,66 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-yellow.svg)](https://opensource.org/license/apache-2-0)
 
 
-**Isaac Lab** is a GPU-accelerated, open-source framework designed to unify and simplify robotics research workflows, such as reinforcement learning, imitation learning, and motion planning. Built on [NVIDIA Isaac Sim](https://docs.isaacsim.omniverse.nvidia.com/latest/index.html), it combines fast and accurate physics and sensor simulation, making it an ideal choice for sim-to-real transfer in robotics.
+**Isaac Lab** 是一个GPU加速的开源框架，旨在统一和简化机器人研究工作流程，如强化学习、模仿学习和运动规划。基于[NVIDIA Isaac Sim](https://docs.isaacsim.omniverse.nvidia.com/latest/index.html)构建，它结合了快速且准确的物理和传感器模拟，使其成为机器人从模拟到现实转移的理想选择。
 
-Isaac Lab provides developers with a range of essential features for accurate sensor simulation, such as RTX-based cameras, LIDAR, or contact sensors. The framework's GPU acceleration enables users to run complex simulations and computations faster, which is key for iterative processes like reinforcement learning and data-intensive tasks. Moreover, Isaac Lab can run locally or be distributed across the cloud, offering flexibility for large-scale deployments.
+Isaac Lab为开发者提供了一系列用于精确传感器模拟的基本功能，如基于RTX的相机、激光雷达或接触传感器。该框架的GPU加速使用户能够更快地运行复杂的模拟和计算，这对于强化学习等迭代过程和数据密集型任务至关重要。此外，Isaac Lab可以在本地运行或分布在云端，为大规模部署提供灵活性。
 
-## Key Features
+## 主要特点
 
-Isaac Lab offers a comprehensive set of tools and environments designed to facilitate robot learning:
-- **Robots**: A diverse collection of robots, from manipulators, quadrupeds, to humanoids, with 16 commonly available models.
-- **Environments**: Ready-to-train implementations of more than 30 environments, which can be trained with popular reinforcement learning frameworks such as RSL RL, SKRL, RL Games, or Stable Baselines. We also support multi-agent reinforcement learning.
-- **Physics**: Rigid bodies, articulated systems, deformable objects
-- **Sensors**: RGB/depth/segmentation cameras, camera annotations, IMU, contact sensors, ray casters.
-
-
-## Getting Started
-
-Our [documentation page](https://isaac-sim.github.io/IsaacLab) provides everything you need to get started, including detailed tutorials and step-by-step guides. Follow these links to learn more about:
-
-- [Installation steps](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html#local-installation)
-- [Reinforcement learning](https://isaac-sim.github.io/IsaacLab/main/source/overview/reinforcement-learning/rl_existing_scripts.html)
-- [Tutorials](https://isaac-sim.github.io/IsaacLab/main/source/tutorials/index.html)
-- [Available environments](https://isaac-sim.github.io/IsaacLab/main/source/overview/environments.html)
+Isaac Lab提供了一套全面的工具和环境，旨在促进机器人学习：
+- **机器人**：多样化的机器人集合，从机械臂、四足机器人到人形机器人，包含16种常见可用模型。
+- **环境**：超过30个可直接训练的环境实现，可以使用流行的强化学习框架如RSL RL、SKRL、RL Games或Stable Baselines进行训练。我们还支持多智能体强化学习。
+- **物理**：刚体、关节系统、可变形物体
+- **传感器**：RGB/深度/分割相机、相机标注、IMU、接触传感器、射线投射器。
 
 
-## Contributing to Isaac Lab
+## 入门指南
 
-We wholeheartedly welcome contributions from the community to make this framework mature and useful for everyone.
-These may happen as bug reports, feature requests, or code contributions. For details, please check our
-[contribution guidelines](https://isaac-sim.github.io/IsaacLab/main/source/refs/contributing.html).
+我们的[文档页面](https://isaac-sim.github.io/IsaacLab)提供了您开始所需的一切，包括详细教程和分步指南。点击以下链接了解更多信息：
 
-## Show & Tell: Share Your Inspiration
+- [安装步骤](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html#local-installation)
+- [强化学习](https://isaac-sim.github.io/IsaacLab/main/source/overview/reinforcement-learning/rl_existing_scripts.html)
+- [教程](https://isaac-sim.github.io/IsaacLab/main/source/tutorials/index.html)
+- [可用环境](https://isaac-sim.github.io/IsaacLab/main/source/overview/environments.html)
 
-We encourage you to utilize our [Show & Tell](https://github.com/isaac-sim/IsaacLab/discussions/categories/show-and-tell) area in the
-`Discussions` section of this repository. This space is designed for you to:
 
-* Share the tutorials you've created
-* Showcase your learning content
-* Present exciting projects you've developed
+## 为Isaac Lab做贡献
 
-By sharing your work, you'll inspire others and contribute to the collective knowledge
-of our community. Your contributions can spark new ideas and collaborations, fostering
-innovation in robotics and simulation.
+我们热烈欢迎社区的贡献，使这个框架成熟并对每个人都有用。
+这些贡献可以是错误报告、功能请求或代码贡献。有关详细信息，请查看我们的
+[贡献指南](https://isaac-sim.github.io/IsaacLab/main/source/refs/contributing.html)。
 
-## Troubleshooting
+## 展示与分享：分享您的灵感
 
-Please see the [troubleshooting](https://isaac-sim.github.io/IsaacLab/main/source/refs/troubleshooting.html) section for
-common fixes or [submit an issue](https://github.com/isaac-sim/IsaacLab/issues).
+我们鼓励您使用我们在此存储库的`讨论`部分中的[展示与分享](https://github.com/isaac-sim/IsaacLab/discussions/categories/show-and-tell)区域。这个空间旨在让您：
 
-For issues related to Isaac Sim, we recommend checking its [documentation](https://docs.omniverse.nvidia.com/app_isaacsim/app_isaacsim/overview.html)
-or opening a question on its [forums](https://forums.developer.nvidia.com/c/agx-autonomous-machines/isaac/67).
+* 分享您创建的教程
+* 展示您的学习内容
+* 展示您开发的令人兴奋的项目
 
-## Support
+通过分享您的工作，您将激励他人并为我们社区的集体知识做出贡献。您的贡献可以激发新的想法和合作，促进机器人和模拟领域的创新。
 
-* Please use GitHub [Discussions](https://github.com/isaac-sim/IsaacLab/discussions) for discussing ideas, asking questions, and requests for new features.
-* Github [Issues](https://github.com/isaac-sim/IsaacLab/issues) should only be used to track executable pieces of work with a definite scope and a clear deliverable. These can be fixing bugs, documentation issues, new features, or general updates.
+## 故障排除
 
-## Connect with the NVIDIA Omniverse Community
+请查看[故障排除](https://isaac-sim.github.io/IsaacLab/main/source/refs/troubleshooting.html)部分了解常见修复方法或[提交问题](https://github.com/isaac-sim/IsaacLab/issues)。
 
-Have a project or resource you'd like to share more widely? We'd love to hear from you! Reach out to the
-NVIDIA Omniverse Community team at OmniverseCommunity@nvidia.com to discuss potential opportunities
-for broader dissemination of your work.
+对于与Isaac Sim相关的问题，我们建议查看其[文档](https://docs.omniverse.nvidia.com/app_isaacsim/app_isaacsim/overview.html)或在其[论坛](https://forums.developer.nvidia.com/c/agx-autonomous-machines/isaac/67)上提问。
 
-Join us in building a vibrant, collaborative ecosystem where creativity and technology intersect. Your
-contributions can make a significant impact on the Isaac Lab community and beyond!
+## 支持
 
-## License
+* 请使用GitHub [讨论](https://github.com/isaac-sim/IsaacLab/discussions)讨论想法、提问和请求新功能。
+* GitHub [问题](https://github.com/isaac-sim/IsaacLab/issues)应仅用于跟踪具有明确范围和明确可交付成果的可执行工作项。这些可以是修复错误、文档问题、新功能或一般更新。
 
-The Isaac Lab framework is released under [BSD-3 License](LICENSE). The `isaaclab_mimic` extension and its corresponding standalone scripts are released under [Apache 2.0](LICENSE-mimic). The license files of its dependencies and assets are present in the [`docs/licenses`](docs/licenses) directory.
+## 与NVIDIA Omniverse社区联系
 
-## Acknowledgement
+有想要更广泛分享的项目或资源吗？我们很乐意听取您的意见！请联系NVIDIA Omniverse社区团队，邮箱为OmniverseCommunity@nvidia.com，讨论更广泛传播您工作的潜在机会。
 
-Isaac Lab development initiated from the [Orbit](https://isaac-orbit.github.io/) framework. We would appreciate if you would cite it in academic publications as well:
+加入我们，共同构建一个充满活力、协作的生态系统，让创造力和技术相交。您的贡献可以对Isaac Lab社区及更广泛领域产生重大影响！
 
-```
-@article{mittal2023orbit,
-   author={Mittal, Mayank and Yu, Calvin and Yu, Qinxi and Liu, Jingzhou and Rudin, Nikita and Hoeller, David and Yuan, Jia Lin and Singh, Ritvik and Guo, Yunrong and Mazhar, Hammad and Mandlekar, Ajay and Babich, Buck and State, Gavriel and Hutter, Marco and Garg, Animesh},
-   journal={IEEE Robotics and Automation Letters},
-   title={Orbit: A Unified Simulation Framework for Interactive Robot Learning Environments},
-   year={2023},
-   volume={8},
-   number={6},
-   pages={3740-3747},
-   doi={10.1109/LRA.2023.3270034}
-}
-```
+## 许可证
+
+Isaac Lab框架在[BSD-3许可证](LICENSE)下发布。`isaaclab_mimic`扩展及其相应的独立脚本在[Apache 2.0](LICENSE-mimic)下发布。其依赖项和资产的许可证文件位于[`docs/licenses`](docs/licenses)目录中。
+
+## 致谢
+
+Isaac Lab的开发源自[Orbit](https://isaac-orbit.github.io/)框架。我们将感谢您在学术出版物中引用它：
