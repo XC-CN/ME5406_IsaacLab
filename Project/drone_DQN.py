@@ -86,11 +86,24 @@ class HoverEnv:
         """获取当前环境状态
         
         返回:
-            包含高度和垂直速度的状态数组
+            包含高度、垂直速度和倾角的状态数组
         """
         z = self.robot.data.root_pos_w[0, 2].item()  # 高度
         vz = self.robot.data.root_vel_w[0, 2].item()  # 垂直速度
-        return np.array([z, vz], dtype=np.float32)
+        
+        # 获取四元数 - 使用正确的root_quat_w变量
+        quat = self.robot.data.root_quat_w[0]  # 获取四元数 [qw, qx, qy, qz]
+        
+        # 计算俯仰角和横滚角
+        qw, qx, qy, qz = quat.cpu().numpy()
+        # 简化的欧拉角计算（使用四元数估算倾角）
+        roll = np.arctan2(2.0 * (qw * qx + qy * qz), 1.0 - 2.0 * (qx * qx + qy * qy))
+        pitch = np.arcsin(2.0 * (qw * qy - qz * qx))
+        
+        # 计算总倾角（俯仰角和横滚角的平方和的平方根）
+        tilt_angle = np.sqrt(roll**2 + pitch**2)
+        
+        return np.array([z, vz, tilt_angle], dtype=np.float32)
 
     def step(self, rpms):
         """执行一步模拟
@@ -122,9 +135,19 @@ class HoverEnv:
 
         # 获取新状态并计算奖励
         state = self._get_state()
-        reward = -abs(state[0] - 1.0) - 0.1 * abs(state[1])  # 奖励基于高度误差和速度
-        done = state[0] < 0.1 or state[0] > 2.  # 如果高度太低或太高则结束
-        print(f"Height: {state[0]}, Done: {done}")
+        
+        # 使用高度和倾角计算奖励
+        height_reward = -abs(state[0] - 1.0)  # 高度奖励
+        velocity_reward = -0.1 * abs(state[1])  # 速度奖励
+        tilt_penalty = -0.5 * state[2]  # 倾角惩罚，倾角越大惩罚越大
+        
+        reward = height_reward + velocity_reward + tilt_penalty
+        
+        # 使用倾角作为主要结束条件
+        max_tilt_angle = 0.5  # 大约30度
+        done = state[2] > max_tilt_angle or state[0] < 0.1 or state[0] > 2.0
+        
+        print(f"\r高度: {state[0]:.2f}, 倾角: {state[2]:.2f}, 结束: {done}", end="")
         return state, reward, done, {}
 
     def sample_action(self):
@@ -133,6 +156,9 @@ class HoverEnv:
         返回:
             随机的四个电机转速
         """
+        # 在最小和最大转速之间均匀采样四个随机值
+        # 这将生成四个独立的随机转速，用于探索不同的动作空间
+        # 返回形状为(4,)的numpy数组，代表四个电机的转速
         return np.random.uniform(self.min_rpm, self.max_rpm, size=(4,))
 
     def balanced_initial_action(self):
@@ -160,6 +186,8 @@ class DQN(nn.Module):
         self.net = nn.Sequential(
             nn.Linear(state_dim, 64),  # 输入层到隐藏层
             nn.ReLU(),                 # 激活函数
+            nn.Linear(64, 64),         # 额外添加一层隐藏层
+            nn.ReLU(),                 # 激活函数
             nn.Linear(64, action_dim)  # 隐藏层到输出层
         )
 
@@ -178,11 +206,11 @@ if __name__ == "__main__":
     # 创建环境实例
     env = HoverEnv(device="cuda" if torch.cuda.is_available() else "cpu")
     
-    # 初始化Q网络和目标网络
-    q_net = DQN(2, 4).to(env.device)
-    target_net = DQN(2, 4).to(env.device)
+    # 初始化Q网络和目标网络 - 现在状态维度是3（高度、速度、倾角）
+    q_net = DQN(3, 4).to(env.device)
+    target_net = DQN(3, 4).to(env.device)
     target_net.load_state_dict(q_net.state_dict())
-    # optimizer = optim.Adam(q_net.parameters(), lr=1e-3)  # 优化器（已注释）
+    optimizer = optim.Adam(q_net.parameters(), lr=1e-3)  # 取消注释优化器
 
     # 初始化经验回放缓冲区和训练参数
     buffer = deque(maxlen=10000)  # 经验回放缓冲区
@@ -208,9 +236,9 @@ if __name__ == "__main__":
 
             # ε-贪婪策略 - 在前100个回合使用平衡转速，之后使用完全随机动作
             if random.random() < epsilon:
-                if episode < 100:  # 训练初期使用平衡转速
-                    action = env.balanced_initial_action()
-                else:  # 之后使用完全随机动作
+                # if episode < 100:  # 训练初期使用平衡转速
+                #     action = env.balanced_initial_action()
+                # else:  # 之后使用完全随机动作
                     action = env.sample_action()  # 随机探索
 
             # 执行动作并获取下一个状态
@@ -240,11 +268,11 @@ if __name__ == "__main__":
                 next_q = target_net(next_states)
                 target = rewards.unsqueeze(1) + gamma * next_q.mean(1, keepdim=True) * (1 - dones.unsqueeze(1))
 
-                # 计算损失并反向传播（但未进行参数更新，因为优化器被注释了）
+                # 计算损失并反向传播
                 loss = nn.MSELoss()(q_selected.mean(1, keepdim=True), target.detach())
-                # optimizer.zero_grad()
+                optimizer.zero_grad()  # 取消注释
                 loss.backward()
-                # optimizer.step()
+                optimizer.step()  # 取消注释
 
             # 如果回合结束则退出
             if done:
