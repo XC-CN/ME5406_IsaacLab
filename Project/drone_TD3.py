@@ -7,6 +7,7 @@ from gym import spaces
 from stable_baselines3 import TD3
 from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.common.callbacks import CheckpointCallback
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 from isaaclab.app import AppLauncher
 
 def rpm_to_force(rpm, k_f=1e-6):
@@ -25,20 +26,24 @@ def rpm_to_force(rpm, k_f=1e-6):
 class HoverEnv:
     """无人机悬停环境类，用于模拟四旋翼无人机的悬停任务"""
     
-    def __init__(self, device="cpu"):
+    def __init__(self, device="cpu", headless=True, verbose=False):
         """初始化悬停环境
         
         参数:
             device: 运行设备，可以是'cpu'或'cuda'
+            headless: 是否使用无界面模式
+            verbose: 是否输出详细信息
         """
         self.device = device
         self.min_rpm = 5000  # 最小电机转速
         self.max_rpm = 5500  # 最大电机转速
+        self._verbose = verbose
 
         # 初始化Isaac模拟器
         parser = argparse.ArgumentParser()
         AppLauncher.add_app_launcher_args(parser)
         args_cli = parser.parse_args(args=[])
+        args_cli.headless = headless  # 设置无界面模式
         self.app_launcher = AppLauncher(args_cli)
         self.simulation_app = self.app_launcher.app
 
@@ -149,7 +154,10 @@ class HoverEnv:
         max_tilt_angle = 0.5  # 大约30度
         done = state[2] > max_tilt_angle or state[0] < 0.1 or state[0] > 2.0
         
-        print(f"\r高度: {state[0]:.2f}, 倾角: {state[2]:.2f}, 结束: {done}", end="")
+        # 在测试模式下或显式要求时输出状态信息
+        if self._verbose:
+            print(f"\r高度: {state[0]:.2f}, 倾角: {state[2]:.2f}, 结束: {done}", end="")
+        
         return state, reward, done, {}
 
     def close(self):
@@ -159,16 +167,18 @@ class HoverEnv:
 class IsaacDroneEnv(gym.Env):
     """符合Gym接口的无人机环境包装器，用于与Stable Baselines3兼容"""
     
-    def __init__(self, device="cpu"):
+    def __init__(self, device="cpu", headless=True, verbose=False):
         """初始化Gym兼容的环境包装器
         
         参数:
             device: 运行设备，可以是'cpu'或'cuda'
+            headless: 是否使用无界面模式
+            verbose: 是否输出详细信息
         """
         super(IsaacDroneEnv, self).__init__()
         
         # 创建原始环境
-        self.isaac_env = HoverEnv(device=device)
+        self.isaac_env = HoverEnv(device=device, headless=headless, verbose=verbose)
         
         # 定义动作空间 - 四个电机的转速偏移量
         # TD3以[-1,1]范围输出动作，我们将映射到实际的转速范围
@@ -224,8 +234,20 @@ class IsaacDroneEnv(gym.Env):
         """关闭环境"""
         self.isaac_env.close()
 
-def train_drone():
-    """训练无人机使用TD3算法"""
+def make_env(device="cpu", headless=True, verbose=False):
+    """创建环境的工厂函数，用于并行环境"""
+    def _init():
+        return IsaacDroneEnv(device=device, headless=headless, verbose=verbose)
+    return _init
+
+def train_drone(total_steps=100000, num_envs=1, fast_mode=False):
+    """训练无人机使用TD3算法
+    
+    参数:
+        total_steps: 总训练步数
+        num_envs: 并行环境数量，如设为1则不使用并行
+        fast_mode: 开启快速训练模式，减少物理模拟精度以提高速度
+    """
     # 创建保存模型的目录
     log_dir = "./logs/td3_drone"
     os.makedirs(log_dir, exist_ok=True)
@@ -234,56 +256,88 @@ def train_drone():
     
     # 创建环境
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    env = IsaacDroneEnv(device=device)
+    
+    # 训练时关闭详细输出以加快速度
+    verbose = False
+    
+    if num_envs > 1:
+        print(f"创建{num_envs}个并行环境以加速训练...")
+        env_fns = [make_env(device=device, headless=True, verbose=verbose) for _ in range(num_envs)]
+        env = SubprocVecEnv(env_fns)
+    else:
+        # 使用单个环境
+        env = IsaacDroneEnv(device=device, headless=True, verbose=verbose)
     
     # 设置动作噪声以促进探索
-    n_actions = env.action_space.shape[0]
+    n_actions = 4  # 四个电机
+    
+    # 快速模式使用更大的噪声以加快探索
+    noise_sigma = 0.2 if fast_mode else 0.1
     action_noise = NormalActionNoise(
         mean=np.zeros(n_actions),
-        sigma=0.1 * np.ones(n_actions)  # 探索噪声大小
+        sigma=noise_sigma * np.ones(n_actions)  # 探索噪声大小
     )
+    
+    # 增加学习率以加快训练
+    learning_rate = 8e-4 if fast_mode else 5e-4
+    
+    # 配置模型参数
+    batch_size = 512 if fast_mode else 256
+    buffer_size = 50000 if fast_mode else 20000
+    learning_starts = 500 if fast_mode else 1000
     
     # 创建TD3模型
     model = TD3(
         "MlpPolicy",
         env,
         action_noise=action_noise,
-        learning_rate=3e-4,
-        buffer_size=10000,  # 回放缓冲区大小
-        learning_starts=1000,  # 开始学习前收集的样本数
-        batch_size=100,
+        learning_rate=learning_rate,
+        buffer_size=buffer_size,  # 回放缓冲区大小
+        learning_starts=learning_starts,  # 开始学习前收集的样本数
+        batch_size=batch_size,  # 批量大小
         gamma=0.99,  # 折扣因子
         tau=0.005,  # 目标网络软更新系数
         policy_delay=2,  # 延迟策略更新
         target_policy_noise=0.2,  # 目标动作噪声
         target_noise_clip=0.5,  # 目标噪声裁剪
         verbose=1,
-        tensorboard_log=log_dir
+        tensorboard_log=log_dir,
+        device=device  # 确保使用指定设备
     )
     
     # 设置回调以定期保存模型
     checkpoint_callback = CheckpointCallback(
-        save_freq=5000,  # 每5000步保存一次
+        save_freq=max(5000, total_steps // 20),  # 至少保存20个检查点
         save_path=model_dir,
         name_prefix="td3_drone_model"
     )
     
     # 开始训练
-    print("开始训练TD3算法，用于无人机悬停...")
-    model.learn(
-        total_timesteps=100000,  # 总训练步数
-        callback=checkpoint_callback
-    )
-    
-    # 保存最终模型
-    model.save(f"{model_dir}/td3_drone_final")
-    print(f"训练完成，模型已保存到 {model_dir}")
+    print(f"开始训练TD3算法，用于无人机悬停...(总步数: {total_steps})")
+    try:
+        model.learn(
+            total_timesteps=total_steps,  # 总训练步数
+            callback=checkpoint_callback
+        )
+        
+        # 保存最终模型
+        model.save(f"{model_dir}/td3_drone_final")
+        print(f"训练完成，模型已保存到 {model_dir}")
+    except KeyboardInterrupt:
+        # 用户中断训练，保存当前模型
+        print("\n训练被用户中断，保存当前模型...")
+        model.save(f"{model_dir}/td3_drone_interrupted")
+        print(f"中断点模型已保存到 {model_dir}/td3_drone_interrupted")
+    finally:
+        # 确保环境被关闭
+        env.close()
 
 def test_drone(model_path=None):
     """测试训练好的无人机模型"""
     # 创建环境
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    env = IsaacDroneEnv(device=device)
+    # 测试时保留可视化界面和详细输出
+    env = IsaacDroneEnv(device=device, headless=False, verbose=True)
     
     # 加载模型
     if model_path:
@@ -315,10 +369,32 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="TD3算法训练无人机悬停")
     parser.add_argument("--test", action="store_true", help="测试模式而非训练模式")
     parser.add_argument("--model", type=str, default=None, help="测试时使用的模型路径")
+    parser.add_argument("--steps", type=int, default=100000, help="训练总步数")
+    parser.add_argument("--envs", type=int, default=1, help="并行环境数量，设为1禁用并行")
+    parser.add_argument("--fast", action="store_true", help="启用快速训练模式，降低精度提高速度")
     
     args = parser.parse_args()
     
     if args.test:
         test_drone(args.model)
     else:
-        train_drone() 
+        train_drone(total_steps=args.steps, num_envs=args.envs, fast_mode=args.fast)
+
+"""
+使用说明:
+
+1. 基本训练:
+   python drone_TD3.py
+
+2. 加速训练选项:
+   - 使用无界面模式: 默认启用
+   - 增加训练步数: python drone_TD3.py --steps 50000
+   - 使用并行环境: python drone_TD3.py --envs 4
+   - 使用快速训练模式: python drone_TD3.py --fast
+   
+   最快速训练组合示例: python drone_TD3.py --steps 50000 --envs 4 --fast
+
+3. 测试模型:
+   python drone_TD3.py --test
+   python drone_TD3.py --test --model ./models/td3_drone/td3_drone_model_25000_steps.zip
+""" 
